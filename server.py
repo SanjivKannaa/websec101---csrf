@@ -13,30 +13,34 @@ c.execute('''CREATE TABLE IF NOT EXISTS users
               email TEXT,
               password TEXT)''')
 conn.commit()
-# conn.close()
 
 
 
 # adding some dummy users
-c.execute('''INSERT INTO users VALUES("1", "user1", "user1@example.com", "iamuser1")''')
-c.execute('''INSERT INTO users VALUES("2", "user2", "user2@example.com", "iamuser2")''')
+c.execute('''INSERT INTO users VALUES("1", "user1", "user1@example.com", "password")''')
+c.execute('''INSERT INTO users VALUES("2", "user2", "user2@example.com", "password")''')
+c.execute('''INSERT INTO users VALUES("3", "admin", "admin@example.com", "admin")''')
 conn.commit()
-
+conn.close()
 
 # Login page
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
         email = request.form['email']
         password = request.form['password']
         c.execute("SELECT id, name FROM users WHERE email=? AND password=?", (email, password))
         user = c.fetchone()
+        conn.close()
         if user:
             session['user_id'] = user[0]
             session['user_name'] = user[1]
             return redirect(url_for('profile'))
         else:
             return render_template('login.html', error='Invalid email or password.')
+        conn.close()
     else:
         return render_template('login.html')
 
@@ -49,6 +53,8 @@ def signup():
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
         c.execute("SELECT * FROM users WHERE email=?", (email,))
         user = c.fetchone()
         if user:
@@ -56,6 +62,7 @@ def signup():
         else:
             c.execute("INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)", (id, name, email, password))
             conn.commit()
+            conn.close()
             session['user_id'] = id
             session['user_name'] = name
             return redirect(url_for('profile'))
@@ -63,35 +70,37 @@ def signup():
         return render_template('signup.html')
 
 # User profile page
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 def profile():
-    if 'user_id' in session:
-        user_id = session['user_id']
-        c.execute("SELECT name, email FROM users WHERE id=?", (user_id,))
-        user = c.fetchone()
-        if user:
-            user_dict = {
-                'name': user[0],
-                'email': user[1]
-            }
-            return render_template('profile.html', user=user_dict)
+    if request.method == 'GET':
+        if 'user_id' in session:
+            user_id = session['user_id']
+            conn = sqlite3.connect('users.db')
+            c = conn.cursor()
+            c.execute("SELECT name, email FROM users WHERE id=?", (user_id,))
+            user = c.fetchone()
+            conn.close()
+            if user:
+                user_dict = {
+                    'name': user[0],
+                    'email': user[1]
+                }
+                return render_template('profile.html', user=user_dict)
+            else:
+                return redirect(url_for('login'))
         else:
             return redirect(url_for('login'))
     else:
-        return redirect(url_for('login'))
-
-
-# Update a user's email address
-@app.route('/profile/update_email', methods=['POST'])
-def update_email():
-    if 'user_id' in session:
         user_id = session['user_id']
         new_email = request.form['email']
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
+        c.execute("SELECT name, email FROM users WHERE id=?", (user_id,))
         c.execute("UPDATE users SET email=? WHERE id=?", (new_email, user_id))
         conn.commit()
+        conn.close()
         return redirect(url_for('profile'))
-    else:
-        return redirect(url_for('login'))
+
 
 
 # Logout
