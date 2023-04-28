@@ -1,0 +1,3 @@
+CSRF VULNERABLILTY WITH NO DEFENCES
+
+post request without any csrf prevention

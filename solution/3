@@ -1,0 +1,3 @@
+CSRF WHERE TOKEN VALIDATION DEPENDS ON TOKEN BEING PRESENT
+
+sending post request without a csrf token doesnt cross check
